@@ -1,7 +1,11 @@
 import pygame
 from sys import exit
 import math
+import random
 #Classes
+distract_stuff = ["phone", "notify_tablet", "controller"]
+school_stuff= ["document", "pencil", "clipboard"]
+
 class Alien(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -35,9 +39,36 @@ class Alien(pygame.sprite.Sprite):
         self.apply_gravity()
         self.animation_handle()
 
+class Stuff(pygame.sprite.Sprite):
+    def __init__(self, is_distraction = False, distract = distract_stuff, school = school_stuff):
+        super().__init__()
+        self.start = random.randint(1600, 1800)
+        self.is_distraction = is_distraction
+        if is_distraction:
+            random_stuff = distract[random.randint(0, len(distract)-1)]
+        elif not is_distraction:
+            random_stuff = school[random.randint(0, len(school)-1)]
+        self.image_path = "assets/%s.png" %random_stuff
+        self.image =pygame.image.load(self.image_path).convert_alpha() 
+        self.rect = self.image.get_rect(center=(self.start,500))
+    def update(self):
+        self.rect.x -= 10
+        self.destroy()
+    def destroy(self):
+        if self.rect.x <-100:
+            self.kill()
+    def draw_test(self):
+        self.image =pygame.image.load(self.image_path).convert_alpha() 
+#functions
+def spawn_stuff():
+    if not stuff_group:
+        stuff_type = random.choice([True, False])
+        stuff_group.add(Stuff(stuff_type))
+
 screen_width = 1600
 screen_height = 800
 player_y_pos = screen_height -120
+
 #set up
 pygame.init()
 screen = pygame.display.set_mode((screen_width, screen_height))
@@ -47,6 +78,11 @@ start_font = pygame.font.Font(None, 50)
 
 player = pygame.sprite.GroupSingle()
 player.add(Alien())
+
+stuff_group = pygame.sprite.Group()
+
+testing_group = pygame.sprite.GroupSingle()
+testing_group.add(Stuff())
 #load assets
 bg_sky = pygame.image.load("assets/sky.png").convert()
 bg_ground = pygame.image.load("assets/ground.png").convert()
@@ -56,6 +92,8 @@ bg_ground = pygame.image.load("assets/ground.png").convert()
 running = True
 bg_scroll = 0
 bg_titles = math.ceil(screen_width/bg_sky.get_width())+1
+
+
 
 #game loop 
 while running:
@@ -70,6 +108,13 @@ while running:
         bg_scroll = 0
 
     screen.blit(bg_ground, (0, player_y_pos))
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    
+    testing_group.draw(screen)
+    testing_group.update()
+    
 
     player.draw(screen)
     player.update()
