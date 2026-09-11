@@ -1,2 +1,3 @@
-# avoid_academic_distractions
+# GWHS_way_to_graduate
+
 school game project
