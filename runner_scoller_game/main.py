@@ -9,13 +9,32 @@ school_stuff= ["document", "pencil", "clipboard", "to_do_list"]
 class Alien(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image_idle = "assets/main_idle.png"
+        '''self.image_idle = "assets/main_idle.png"
         self.image_walk_1 ="assets/main_walk_1.png"
         self.image_walk_2 ="assets/main_walk_2.png"
         self.image_jump ="assets/main_jump.png"
-        self.image_descend  ="assets/main_descend.png"
-        self.walk_frame = 1
-        self.show_image = self.image_idle
+        self.image_descend  ="assets/main_descend.png"'''
+        self.image_eagle_1 = "assets/eagle_1.png"
+        self.image_eagle_2 = "assets/eagle_2.png"
+        self.image_eagle_3 = "assets/eagle_3.png"
+        self.image_eagle_4 = "assets/eagle_4.png"
+
+        self.can_double_jump = True
+        self.can_glide = True
+        self.can_shoot = True
+        self.jumped = False
+
+        self.level = 1
+        match self.level:
+            case 1:
+                self.show_image = self.image_eagle_1
+            case 2:
+                self.show_image = self.image_eagle_2
+            case 3:
+                self.show_image = self.image_eagle_3
+            case 4:
+                self.show_image = self.image_eagle_4
+
         self.image= pygame.image.load(self.show_image).convert_alpha()
         self.rect = self.image.get_rect(midbottom = (100, player_y_pos))
         self.gravity = 0
@@ -23,16 +42,35 @@ class Alien(pygame.sprite.Sprite):
     def player_input(self):
         keys = pygame.key.get_pressed()
         keys_released = pygame.key.get_just_released()
-        if keys[pygame.K_UP] and self.rect.bottom >= player_y_pos:
-            self.gravity = -22
+        if keys[pygame.K_UP]:
+                if not self.jumped:  
+                    if self.rect.bottom >= player_y_pos:
+                        self.gravity = -22
+                        self.can_glide = True
+                    elif self.can_double_jump:
+                        self.gravity = -18
+                        self.can_double_jump = False
+                        self.can_glide = True
+                    self.jumped = True
         if keys[pygame.K_DOWN]:
-            self.show_image = self.image_descend
+            '''self.show_image = self.image_descend
             self.image= pygame.image.load(self.show_image).convert_alpha()
-            self.rect = self.image.get_rect(midbottom = (100, player_y_pos))
+            self.rect = self.image.get_rect(midbottom = (100, player_y_pos))'''
+            if self.can_glide:
+                self.gravity = 2.5
+                self.rect.y += self.gravity
+        if keys[pygame.K_SPACE]:
+            if self.can_shoot:
+                shoot_feather()
+                self.can_shoot = False
+        
         if keys_released[pygame.K_DOWN]:
-            self.image= pygame.image.load(self.show_image).convert_alpha()
-            self.rect = self.image.get_rect(midbottom = (100, player_y_pos))
-    def animation_handle(self):
+            '''self.image= pygame.image.load(self.show_image).convert_alpha()
+            self.rect = self.image.get_rect(midbottom = (100, player_y_pos))'''
+            pass
+        if keys_released[pygame.K_UP]:
+            self.jumped = False
+    def animation_handle(self):'''
         self.image= pygame.image.load(self.show_image).convert_alpha()
         if self.rect.bottom < player_y_pos:
             self.show_image = self.image_jump
@@ -42,12 +80,15 @@ class Alien(pygame.sprite.Sprite):
             elif self.walk_frame == 2:
                 self.show_image = self.image_walk_2
             else:
-                self.show_image = self.image_idle
+                self.show_image = self.image_idle'''
     def apply_gravity(self):
         self.gravity += 1
         self.rect.y += self.gravity
-        if self.rect.bottom > player_y_pos:
+        if self.rect.bottom >= player_y_pos:
             self.rect.bottom = player_y_pos
+            self.gravity = 0
+            self.can_double_jump = True
+            self.can_glide = False
     def update(self):
         self.player_input()
         self.apply_gravity()
@@ -72,6 +113,19 @@ class Stuff(pygame.sprite.Sprite):
     def destroy(self):
         if self.rect.x <-100:
             self.kill()
+
+class Feather(pygame.sprite.Sprite):
+    def __init__(self, player_y_center):
+        super().__init__()
+        self.image = pygame.image.load("assets/feather.png").convert_alpha()
+        self.speed = 15
+        self.rect = self.image.get_rect(center = (120, player_y_center))
+    def update(self):
+        self.rect.x += self.speed
+        if self.rect.x > screen_width:
+            self.kill()
+            player.sprite.can_shoot = True
+
 #functions
 
 def spawn_stuff():
@@ -93,6 +147,11 @@ def spawn_stuff():
         last_spawn_time = current_time
     else:
         return
+
+def shoot_feather():
+    player_y = player.sprite.rect.y
+    player_y = player_y + player.sprite.rect.height /2
+    feather_group.add(Feather(player_y))
 
 
 def check_collisions():
@@ -131,7 +190,7 @@ def display_score_and_timer():
 
 def in_game_scene():
     global bg_scroll
-
+    player.sprite.level = level
     for i in range(0, bg_titles):
             screen.blit(bg_sky, (i*bg_sky.get_width()+bg_scroll, 0))
     bg_scroll -= 5
@@ -144,7 +203,8 @@ def in_game_scene():
     stuff_group.update()
     if not len(stuff_group)>2 and can_spawn == True:
         spawn_stuff()
-
+    feather_group.draw(screen)
+    feather_group.update()
     player.draw(screen)
     player.update()
 
@@ -204,6 +264,7 @@ player = pygame.sprite.GroupSingle()
 player.add(Alien())
 
 stuff_group = pygame.sprite.Group()
+feather_group = pygame.sprite.Group()
 
 #load assets
 bg_sky = pygame.image.load("assets/sky.png").convert()
@@ -227,6 +288,8 @@ fail_sound = pygame.mixer.Sound("assets/sfx/fail.mp3")
 fail_sound.set_volume(0.5)
 
 #variables
+level = 2
+
 running = True
 bg_scroll = 0
 bg_titles = math.ceil(screen_width/bg_sky.get_width())+1
@@ -263,14 +326,15 @@ while running:
         if event.type == TIMER_EVENT and game_scene == 1:
             if timer > 0:
                 timer -= 1
-        if event.type == TIMER_WALKING and game_scene == 1:
+        '''if event.type == TIMER_WALKING and game_scene == 1:
             if player.sprite.walk_frame ==1 :
                 player.sprite.walk_frame = 2
             else:
-                player.sprite.walk_frame = 1
+                player.sprite.walk_frame = 1'''
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 if start_button_rect.collidepoint(event.pos):
+                    running = True
                     game_scene = 1
                 if exit_button_rect.collidepoint(event.pos):
                     running = False
