@@ -123,8 +123,28 @@ class Feather(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.speed
         if self.rect.x > screen_width:
-            self.kill()
-            player.sprite.can_shoot = True
+            self.destroy()
+    def destroy(self):
+        self.kill()
+        player.sprite.can_shoot = True
+
+class Barrier(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.text_list = ["Service-Learning Project", "23.5 Credits","Keystone Exam", "CTE"]
+        self.font = pygame.font.Font(None, 24)
+        self.image = pygame.image.load("assets/barrier.png").convert_alpha()
+        self.rect = self.image.get_rect(midbottom = (screen_width +10,player_y_pos))
+        self.health = 3
+        self.text = random.choice(self.text_list)
+        self.font_surface = self.font.render(self.text, True, (0,0,0))
+    def update(self):
+        self.rect.x -= 5
+        screen.blit(self.font_surface, (self.rect.x- self.rect.x/2, self.rect.y - self.rect.y/2))
+        if self.rect.x > screen_width:
+            self.destroy()
+    def destroy(self):
+        self.kill()
 
 #functions
 
@@ -173,6 +193,15 @@ def check_collisions():
                     score += 5
                     score = min(100, score)
                 writing_sound.play()
+    if feather_group.sprite:
+        collided_barrier = pygame.sprite.spritecollide(feather_group.sprite, barrier_group, False)
+        for barrier in collided_barrier:
+            feather_group.sprite.destroy()
+            barrier.health -= 1
+            if barrier.health== 0:
+                barrier.destroy()
+
+
 
 def display_score_and_timer():
     time_in_minute = int(timer/60)
@@ -203,6 +232,8 @@ def in_game_scene():
     stuff_group.update()
     if not len(stuff_group)>2 and can_spawn == True:
         spawn_stuff()
+    barrier_group.draw(screen)
+    barrier_group.update()
     feather_group.draw(screen)
     feather_group.update()
     player.draw(screen)
@@ -264,7 +295,9 @@ player = pygame.sprite.GroupSingle()
 player.add(Alien())
 
 stuff_group = pygame.sprite.Group()
-feather_group = pygame.sprite.Group()
+feather_group = pygame.sprite.GroupSingle()
+barrier_group = pygame.sprite.Group()
+barrier_group.add(Barrier())
 
 #load assets
 bg_sky = pygame.image.load("assets/sky.png").convert()
