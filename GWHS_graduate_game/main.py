@@ -7,7 +7,7 @@ distract_stuff = ["phone", "notify_tablet", "controller"]
 school_stuff= ["document", "pencil", "clipboard", "to_do_list"]
 
 class Alien(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, level = 2):
         super().__init__()
         '''self.image_idle = "assets/main_idle.png"
         self.image_walk_1 ="assets/main_walk_1.png"
@@ -24,8 +24,7 @@ class Alien(pygame.sprite.Sprite):
         self.can_shoot = True
         self.jumped = False
 
-        self.level = 1
-        match self.level:
+        match level:
             case 1:
                 self.show_image = self.image_eagle_1
             case 2:
@@ -95,11 +94,12 @@ class Alien(pygame.sprite.Sprite):
         self.animation_handle()
 
 class Stuff(pygame.sprite.Sprite):
-    def __init__(self, is_distraction = False, distract = distract_stuff, school = school_stuff):
+    def __init__(self, is_distraction = False, speed = 10, highest_y = 250, distract = distract_stuff, school = school_stuff):
         super().__init__()
         self.start_x = random.randint(1600, 1800)
-        self.start_y = random.randint(player_y_pos-250, player_y_pos-30)
+        self.start_y = random.randint(player_y_pos-highest_y, player_y_pos-30)
         self.is_distraction = is_distraction
+        self.speed = speed
         if is_distraction:
             self.random_stuff = distract[random.randint(0, len(distract)-1)]
         elif not is_distraction:
@@ -108,7 +108,7 @@ class Stuff(pygame.sprite.Sprite):
         self.image =pygame.image.load(self.image_path).convert_alpha() 
         self.rect = self.image.get_rect(center=(self.start_x,self.start_y))
     def update(self):
-        self.rect.x -= 10
+        self.rect.x -= self.speed
         self.destroy()
     def destroy(self):
         if self.rect.x <-100:
@@ -133,7 +133,7 @@ def spawn_stuff():
     global last_spawn_time
     global distraction_in_arow
     if can_spawn == True:
-        if distraction_in_arow >3:
+        if distraction_in_arow >num_of_stuffs:
             stuff_type = False
         else:
             stuff_type = random.choice([True, False])
@@ -142,7 +142,7 @@ def spawn_stuff():
             distraction_in_arow += 1
         else:
             distraction_in_arow = 0
-        stuff_group.add(Stuff(stuff_type))
+        stuff_group.add(Stuff(stuff_type, stuff_speed, highest_y))
         can_spawn =False
         last_spawn_time = current_time
     else:
@@ -193,7 +193,7 @@ def in_game_scene():
     player.sprite.level = level
     for i in range(0, bg_titles):
             screen.blit(bg_sky, (i*bg_sky.get_width()+bg_scroll, 0))
-    bg_scroll -= 5
+    bg_scroll -= 3
     if abs(bg_scroll) >bg_sky.get_width():
         bg_scroll = 0
 
@@ -288,7 +288,13 @@ fail_sound = pygame.mixer.Sound("assets/sfx/fail.mp3")
 fail_sound.set_volume(0.5)
 
 #variables
-level = 2
+level = 4
+
+num_of_stuffs = 3
+timer = 30
+highest_y = 460
+stuff_speed = 30
+
 
 running = True
 bg_scroll = 0
@@ -300,7 +306,6 @@ game_end = False
 game_scene = 0
 introduce_scene = 0
 score = 0
-timer = 60
 
 
 
