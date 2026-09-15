@@ -131,29 +131,33 @@ class Feather(pygame.sprite.Sprite):
 class Barrier(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.text_list = ["Service-Learning Project", "23.5 Credits","Keystone Exam", "CTE"]
-        self.font = pygame.font.Font(None, 24)
+        self.text_list = ["Service\nLearning\nProject", "23.5\nCredits","Keystone\nExam", "CTE"]
         self.image = pygame.image.load("assets/barrier.png").convert_alpha()
-        self.rect = self.image.get_rect(midbottom = (screen_width +10,player_y_pos))
+        self.rect = self.image.get_rect(midbottom = (screen_width +80,player_y_pos))
         self.health = 3
         self.text = random.choice(self.text_list)
+        if self.text == "CTE":
+            self.font_size = 36
+        else:
+            self.font_size = 30
+        self.font = pygame.font.Font(None, self.font_size)
         self.font_surface = self.font.render(self.text, True, (0,0,0))
     def update(self):
         self.rect.x -= 5
-        screen.blit(self.font_surface, (self.rect.x- self.rect.x/2, self.rect.y - self.rect.y/2))
-        if self.rect.x > screen_width:
+        screen.blit(self.font_surface, (self.rect.x +30, self.rect.y + (self.rect.height/2-12)))
+        if self.rect.x < -100:
             self.destroy()
     def destroy(self):
         self.kill()
 
 #functions
 
-def spawn_stuff():
+def spawn_stuff(stuff_speed, highest_y):
     global can_spawn
     global last_spawn_time
     global distraction_in_arow
     if can_spawn == True:
-        if distraction_in_arow >num_of_stuffs:
+        if distraction_in_arow > 3:
             stuff_type = False
         else:
             stuff_type = random.choice([True, False])
@@ -167,6 +171,29 @@ def spawn_stuff():
         last_spawn_time = current_time
     else:
         return
+
+def spawn_a_row_stuff(stuff_speed, highest_y):
+    global can_spawn
+    global last_spawn_time
+    global distraction_in_arow
+    original_x = 0
+    new_y = 250
+
+    new_stuff = Stuff(False, stuff_speed, highest_y)
+    new_stuff.rect.y = new_y 
+    original_x = new_stuff.rect.x
+    stuff_group.add(new_stuff)
+    for i in range(0,4):
+        new_y += 75
+        original_x+= 400
+        new_stuff = Stuff(False, stuff_speed, highest_y)
+        new_stuff.rect.y = new_y 
+        new_stuff.rect.x = original_x
+        stuff_group.add(new_stuff)
+    can_spawn = False
+    
+    
+    
 
 def shoot_feather():
     player_y = player.sprite.rect.y
@@ -193,6 +220,11 @@ def check_collisions():
                     score += 5
                     score = min(100, score)
                 writing_sound.play()
+        collided_barrier = pygame.sprite.spritecollide(player.sprite, barrier_group, True)
+        for barrier in collided_barrier:
+            score -= 20
+            score = min(0, score)
+            barrier.destroy()
     if feather_group.sprite:
         collided_barrier = pygame.sprite.spritecollide(feather_group.sprite, barrier_group, False)
         for barrier in collided_barrier:
@@ -200,6 +232,7 @@ def check_collisions():
             barrier.health -= 1
             if barrier.health== 0:
                 barrier.destroy()
+                score += 10
 
 
 
@@ -228,14 +261,8 @@ def in_game_scene():
 
     screen.blit(bg_ground, (0, player_y_pos))
 
-    stuff_group.draw(screen) 
-    stuff_group.update()
-    if not len(stuff_group)>2 and can_spawn == True:
-        spawn_stuff()
-    barrier_group.draw(screen)
-    barrier_group.update()
-    feather_group.draw(screen)
-    feather_group.update()
+    level_4()
+    
     player.draw(screen)
     player.update()
 
@@ -254,7 +281,7 @@ def result_display():
     if score <20:
         grade = "f"
         text = "You didn't pass the test, you should put distractions things out of your sight while learning!"
-    elif score <40:
+    elif score <50:
         grade = "d"
         text = "You didn't pass the test, but it's almost there may be try to more focus and try harder in your next time!"
     elif score <60:
@@ -276,6 +303,64 @@ def result_display():
     screen.blit(commend_surf, commend_rect)
 
     
+def level_1():
+    num_of_stuffs = 2
+    highest_y = 250
+    stuff_speed = 10
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+        spawn_stuff(stuff_speed, highest_y)
+
+
+def level_2():
+    num_of_stuffs = 3
+    highest_y = 300
+    stuff_speed = 15
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+        spawn_stuff(stuff_speed, highest_y)
+
+def level_3():
+    num_of_stuffs = 3
+    highest_y = 300
+    stuff_speed = 25
+    rate = random.randint(0, 100)
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if rate <= 3:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_a_row_stuff(stuff_speed, highest_y)
+    else:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_stuff(stuff_speed, highest_y)
+
+def level_4():
+    global time_passed 
+    num_of_stuffs = 3
+    highest_y = 460
+    stuff_speed = 25
+    rate = random.randint(0, 100)
+    if time_passed >= 10:
+        barrier_group.add(Barrier())
+        time_passed -= 10
+    barrier_group.draw(screen)
+    barrier_group.update()
+    feather_group.draw(screen)
+    feather_group.update()
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if rate <= 3:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_a_row_stuff(stuff_speed, highest_y)
+    else:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_stuff(stuff_speed, highest_y)
 
 
 #set up
@@ -297,7 +382,6 @@ player.add(Alien())
 stuff_group = pygame.sprite.Group()
 feather_group = pygame.sprite.GroupSingle()
 barrier_group = pygame.sprite.Group()
-barrier_group.add(Barrier())
 
 #load assets
 bg_sky = pygame.image.load("assets/sky.png").convert()
@@ -323,11 +407,8 @@ fail_sound.set_volume(0.5)
 #variables
 level = 4
 
-num_of_stuffs = 3
-timer = 30
-highest_y = 460
-stuff_speed = 30
-
+timer = 25
+time_passed = 0
 
 running = True
 bg_scroll = 0
@@ -364,6 +445,7 @@ while running:
         if event.type == TIMER_EVENT and game_scene == 1:
             if timer > 0:
                 timer -= 1
+                time_passed += 1
         '''if event.type == TIMER_WALKING and game_scene == 1:
             if player.sprite.walk_frame ==1 :
                 player.sprite.walk_frame = 2
