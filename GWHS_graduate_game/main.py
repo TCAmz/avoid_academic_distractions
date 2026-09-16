@@ -223,7 +223,7 @@ def check_collisions():
         collided_barrier = pygame.sprite.spritecollide(player.sprite, barrier_group, True)
         for barrier in collided_barrier:
             score -= 20
-            score = min(0, score)
+            score = max(0, score)
             barrier.destroy()
     if feather_group.sprite:
         collided_barrier = pygame.sprite.spritecollide(feather_group.sprite, barrier_group, False)
@@ -233,6 +233,7 @@ def check_collisions():
             if barrier.health== 0:
                 barrier.destroy()
                 score += 10
+                score = min(100, score)
 
 
 
@@ -261,7 +262,15 @@ def in_game_scene():
 
     screen.blit(bg_ground, (0, player_y_pos))
 
-    level_4()
+    match level:
+        case 1:
+            level_1()
+        case 2:
+            level_2()
+        case 3:
+            level_3()
+        case 4:
+            level_4()
     
     player.draw(screen)
     player.update()
@@ -456,6 +465,15 @@ while running:
                 if start_button_rect.collidepoint(event.pos):
                     running = True
                     game_scene = 1
+                    match level:
+                        case 1:
+                            timer = 60
+                        case 2:
+                            timer = 40
+                        case 3:
+                            40
+                        case 4:
+                            35
                 if exit_button_rect.collidepoint(event.pos):
                     running = False
                 if play_again_button_rect.collidepoint(event.pos):
