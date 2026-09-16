@@ -3,7 +3,7 @@ from sys import exit
 import math
 import random
 #Classes
-distract_stuff = ["phone", "notify_tablet", "controller"]
+distract_stuff = ["phone", "phone_notify", "controller"]
 school_stuff= ["document", "pencil", "clipboard", "to_do_list"]
 
 class Alien(pygame.sprite.Sprite):
@@ -364,7 +364,7 @@ def level_4():
 
     stuff_group.draw(screen) 
     stuff_group.update()
-    if rate <= 3:
+    if rate <= 40:
         if not len(stuff_group)>num_of_stuffs and can_spawn == True:
             spawn_a_row_stuff(stuff_speed, highest_y)
     else:
@@ -416,7 +416,7 @@ fail_sound.set_volume(0.5)
 #variables
 level = 4
 
-timer = 25
+timer = 60
 time_passed = 0
 
 running = True
