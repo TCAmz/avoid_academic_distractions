@@ -7,7 +7,7 @@ distract_stuff = ["phone", "phone_notify", "controller"]
 school_stuff= ["document", "pencil", "clipboard", "to_do_list"]
 
 class Alien(pygame.sprite.Sprite):
-    def __init__(self, level):
+    def __init__(self, level = 1):
         super().__init__()
         '''self.image_idle = "assets/main_idle.png"
         self.image_walk_1 ="assets/main_walk_1.png"
@@ -45,7 +45,8 @@ class Alien(pygame.sprite.Sprite):
                 if not self.jumped:  
                     if self.rect.bottom >= player_y_pos:
                         self.gravity = -22
-                        self.can_glide = True
+                        if level >=3:
+                            self.can_glide = True
                     elif self.can_double_jump:
                         self.gravity = -18
                         self.can_double_jump = False
@@ -87,7 +88,7 @@ class Alien(pygame.sprite.Sprite):
             self.rect.bottom = player_y_pos
             self.gravity = 0
             self.can_glide = False
-            if level <2:
+            if level >=2:
                 self.can_double_jump = True
     def update(self):
         self.player_input()
@@ -439,7 +440,7 @@ fail_sound = pygame.mixer.Sound("assets/sfx/fail.mp3")
 fail_sound.set_volume(0.5)
 
 #variables
-level = 1
+level = 3
 
 timer = 60
 time_passed = 0
@@ -488,18 +489,21 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 if start_button_rect.collidepoint(event.pos) and introduce_scene == 2:
+                    player.add(Alien(level))
                     running = True
                     game_scene = 1
                     match level:
                         case 1:
                             timer = 60
-                            player.sprite.can_
                         case 2:
                             timer = 40
+                            player.sprite.can_double_jump = True
                         case 3:
                             timer = 40
+                            player.sprite.can_glide = True
                         case 4:
                             timer = 35
+                            player.sprite.can_shoot = True
                     introduce_scene = 0
                 if continue_button_start_rect.collidepoint(event.pos):
                     introduce_scene += 1
@@ -508,12 +512,13 @@ while running:
                     level += 1
                     grade_level = "10th"
                     game_scene = 0
+                    print(2)
                 if exit_button_rect.collidepoint(event.pos) and game_end:
                     running = False
                 if play_again_button_rect.collidepoint(event.pos) and test_passed == False:
                     score = 0
                     timer = 60
-                    game_scene = 0
+                    game_scene = 1
                     player.remove(player.sprite)
                     
                     
