@@ -3,11 +3,11 @@ from sys import exit
 import math
 import random
 #Classes
-distract_stuff = ["phone", "notify_tablet", "controller"]
+distract_stuff = ["phone", "phone_notify", "controller"]
 school_stuff= ["document", "pencil", "clipboard", "to_do_list"]
 
 class Alien(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, level = 1):
         super().__init__()
         '''self.image_idle = "assets/main_idle.png"
         self.image_walk_1 ="assets/main_walk_1.png"
@@ -19,13 +19,12 @@ class Alien(pygame.sprite.Sprite):
         self.image_eagle_3 = "assets/eagle_3.png"
         self.image_eagle_4 = "assets/eagle_4.png"
 
-        self.can_double_jump = True
-        self.can_glide = True
-        self.can_shoot = True
+        self.can_double_jump = False
+        self.can_glide = False
+        self.can_shoot = False
         self.jumped = False
 
-        self.level = 1
-        match self.level:
+        match level:
             case 1:
                 self.show_image = self.image_eagle_1
             case 2:
@@ -46,7 +45,8 @@ class Alien(pygame.sprite.Sprite):
                 if not self.jumped:  
                     if self.rect.bottom >= player_y_pos:
                         self.gravity = -22
-                        self.can_glide = True
+                        if level >=3:
+                            self.can_glide = True
                     elif self.can_double_jump:
                         self.gravity = -18
                         self.can_double_jump = False
@@ -87,19 +87,21 @@ class Alien(pygame.sprite.Sprite):
         if self.rect.bottom >= player_y_pos:
             self.rect.bottom = player_y_pos
             self.gravity = 0
-            self.can_double_jump = True
             self.can_glide = False
+            if level >=2:
+                self.can_double_jump = True
     def update(self):
         self.player_input()
         self.apply_gravity()
         self.animation_handle()
 
 class Stuff(pygame.sprite.Sprite):
-    def __init__(self, is_distraction = False, distract = distract_stuff, school = school_stuff):
+    def __init__(self, is_distraction = False, speed = 10, highest_y = 250, distract = distract_stuff, school = school_stuff):
         super().__init__()
         self.start_x = random.randint(1600, 1800)
-        self.start_y = random.randint(player_y_pos-250, player_y_pos-30)
+        self.start_y = random.randint(player_y_pos-highest_y, player_y_pos-30)
         self.is_distraction = is_distraction
+        self.speed = speed
         if is_distraction:
             self.random_stuff = distract[random.randint(0, len(distract)-1)]
         elif not is_distraction:
@@ -108,7 +110,7 @@ class Stuff(pygame.sprite.Sprite):
         self.image =pygame.image.load(self.image_path).convert_alpha() 
         self.rect = self.image.get_rect(center=(self.start_x,self.start_y))
     def update(self):
-        self.rect.x -= 10
+        self.rect.x -= self.speed
         self.destroy()
     def destroy(self):
         if self.rect.x <-100:
@@ -123,17 +125,41 @@ class Feather(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.speed
         if self.rect.x > screen_width:
-            self.kill()
-            player.sprite.can_shoot = True
+            self.destroy()
+    def destroy(self):
+        self.kill()
+        player.sprite.can_shoot = True
+
+class Barrier(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.text_list = ["Service\nLearning\nProject", "23.5\nCredits","Keystone\nExam", "CTE"]
+        self.image = pygame.image.load("assets/barrier.png").convert_alpha()
+        self.rect = self.image.get_rect(midbottom = (screen_width +80,player_y_pos))
+        self.health = 3
+        self.text = random.choice(self.text_list)
+        if self.text == "CTE":
+            self.font_size = 36
+        else:
+            self.font_size = 30
+        self.font = pygame.font.Font(None, self.font_size)
+        self.font_surface = self.font.render(self.text, True, (0,0,0))
+    def update(self):
+        self.rect.x -= 5
+        screen.blit(self.font_surface, (self.rect.x +30, self.rect.y + (self.rect.height/2-12)))
+        if self.rect.x < -100:
+            self.destroy()
+    def destroy(self):
+        self.kill()
 
 #functions
 
-def spawn_stuff():
+def spawn_stuff(stuff_speed, highest_y):
     global can_spawn
     global last_spawn_time
     global distraction_in_arow
     if can_spawn == True:
-        if distraction_in_arow >3:
+        if distraction_in_arow >=3:
             stuff_type = False
         else:
             stuff_type = random.choice([True, False])
@@ -142,11 +168,34 @@ def spawn_stuff():
             distraction_in_arow += 1
         else:
             distraction_in_arow = 0
-        stuff_group.add(Stuff(stuff_type))
+        stuff_group.add(Stuff(stuff_type, stuff_speed, highest_y))
         can_spawn =False
         last_spawn_time = current_time
     else:
         return
+
+def spawn_a_row_stuff(stuff_speed, highest_y):
+    global can_spawn
+    global last_spawn_time
+    global distraction_in_arow
+    original_x = 0
+    new_y = 250
+
+    new_stuff = Stuff(False, stuff_speed, highest_y)
+    new_stuff.rect.y = new_y 
+    original_x = new_stuff.rect.x
+    stuff_group.add(new_stuff)
+    for i in range(0,4):
+        new_y += 75
+        original_x+= 400
+        new_stuff = Stuff(False, stuff_speed, highest_y)
+        new_stuff.rect.y = new_y 
+        new_stuff.rect.x = original_x
+        stuff_group.add(new_stuff)
+    can_spawn = False
+    
+    
+    
 
 def shoot_feather():
     player_y = player.sprite.rect.y
@@ -173,6 +222,22 @@ def check_collisions():
                     score += 5
                     score = min(100, score)
                 writing_sound.play()
+        collided_barrier = pygame.sprite.spritecollide(player.sprite, barrier_group, True)
+        for barrier in collided_barrier:
+            score -= 20
+            score = max(0, score)
+            barrier.destroy()
+    if feather_group.sprite:
+        collided_barrier = pygame.sprite.spritecollide(feather_group.sprite, barrier_group, False)
+        for barrier in collided_barrier:
+            feather_group.sprite.destroy()
+            barrier.health -= 1
+            if barrier.health== 0:
+                barrier.destroy()
+                score += 10
+                score = min(100, score)
+
+
 
 def display_score_and_timer():
     time_in_minute = int(timer/60)
@@ -193,18 +258,22 @@ def in_game_scene():
     player.sprite.level = level
     for i in range(0, bg_titles):
             screen.blit(bg_sky, (i*bg_sky.get_width()+bg_scroll, 0))
-    bg_scroll -= 5
+    bg_scroll -= 3
     if abs(bg_scroll) >bg_sky.get_width():
         bg_scroll = 0
 
     screen.blit(bg_ground, (0, player_y_pos))
 
-    stuff_group.draw(screen) 
-    stuff_group.update()
-    if not len(stuff_group)>2 and can_spawn == True:
-        spawn_stuff()
-    feather_group.draw(screen)
-    feather_group.update()
+    match level:
+        case 1:
+            level_1()
+        case 2:
+            level_2()
+        case 3:
+            level_3()
+        case 4:
+            level_4()
+    
     player.draw(screen)
     player.update()
 
@@ -212,6 +281,8 @@ def in_game_scene():
     display_score_and_timer()  
 
 def result_display():
+    global level
+    global test_passed
     grade = ""
     text = ""
     result_font = pygame.font.Font(None, 100)
@@ -223,16 +294,19 @@ def result_display():
     if score <20:
         grade = "f"
         text = "You didn't pass the test, you should put distractions things out of your sight while learning!"
-    elif score <40:
+    elif score <50:
         grade = "d"
         text = "You didn't pass the test, but it's almost there may be try to more focus and try harder in your next time!"
     elif score <60:
+        test_passed = True
         grade = "c"
         text = "You passed the test, but you can do it better if put more effort on it."
     elif score <80:
+        test_passed = True
         grade = "b"
         text = "Good job! The Key is to try to avoid distractions. Easy, isn't it?"
     elif score <= 100:
+        test_passed = True
         grade = "a"
         text = "Wonderful! Keep this momentum going, you're on a roll"
     commend_surf = commend_font.render(text, True, (255, 255, 255))
@@ -245,6 +319,64 @@ def result_display():
     screen.blit(commend_surf, commend_rect)
 
     
+def level_1():
+    num_of_stuffs = 2
+    highest_y = 250
+    stuff_speed = 10
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+        spawn_stuff(stuff_speed, highest_y)
+
+
+def level_2():
+    num_of_stuffs = 3
+    highest_y = 300
+    stuff_speed = 15
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+        spawn_stuff(stuff_speed, highest_y)
+
+def level_3():
+    num_of_stuffs = 3
+    highest_y = 300
+    stuff_speed = 25
+    rate = random.randint(0, 100)
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if rate <= 3:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_a_row_stuff(stuff_speed, highest_y)
+    else:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_stuff(stuff_speed, highest_y)
+
+def level_4():
+    global time_passed 
+    num_of_stuffs = 3
+    highest_y = 460
+    stuff_speed = 25
+    rate = random.randint(0, 100)
+    if time_passed >= 10:
+        barrier_group.add(Barrier())
+        time_passed -= 10
+    barrier_group.draw(screen)
+    barrier_group.update()
+    feather_group.draw(screen)
+    feather_group.update()
+
+    stuff_group.draw(screen) 
+    stuff_group.update()
+    if rate <= 3:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_a_row_stuff(stuff_speed, highest_y)
+    else:
+        if not len(stuff_group)>num_of_stuffs and can_spawn == True:
+            spawn_stuff(stuff_speed, highest_y)
 
 
 #set up
@@ -264,23 +396,43 @@ player = pygame.sprite.GroupSingle()
 player.add(Alien())
 
 stuff_group = pygame.sprite.Group()
-feather_group = pygame.sprite.Group()
+feather_group = pygame.sprite.GroupSingle()
+barrier_group = pygame.sprite.Group()
 
 #load assets
 bg_sky = pygame.image.load("assets/sky.png").convert()
 bg_ground = pygame.image.load("assets/ground.png").convert()
  
 start_scene = pygame.image.load("assets/start_scene.png").convert()
-start_button = pygame.image.load("assets/start_button.png").convert_alpha()
-start_button_rect = start_button.get_rect(center=(725, screen_height-75))
-
 end_scene = pygame.image.load("assets/end_scene.png").convert()
+    #introduce scene
+introduce_scene_image = pygame.image.load("assets/level_1_introduce_1.png").convert
+
+
+
+    #buttons 
+start_button = pygame.image.load("assets/start_button.png").convert_alpha()
+start_button_rect = start_button.get_rect(center=(screen_width/2, screen_height-75))
+
 exit_button = pygame.image.load("assets/exit_button.png").convert_alpha()
 exit_button_rect = exit_button.get_rect(center=(screen_width/2 -250, screen_height-75))
 
 play_again_button = pygame.image.load("assets/play_again_button.png").convert_alpha()
 play_again_button_rect = play_again_button.get_rect(center=(screen_width/2+250, screen_height-75))
 
+continue_button = pygame.image.load("assets/continue_button.png").convert_alpha()
+continue_button_start_rect = continue_button.get_rect(center = (screen_width/2, screen_height-75))
+continue_button_end_rect = continue_button.get_rect(center = (screen_width/2+250, screen_height-75))
+
+
+    #fonts
+
+grade_level = "9th"
+grade_font = pygame.font.Font(None, 60)
+grade_surf = grade_font.render("Grade: %s" %grade_level, True, (0,0,0))
+grade_rect = grade_surf.get_rect(center = (screen_width/2, screen_height/2)) 
+
+    #sounds
 writing_sound = pygame.mixer.Sound("assets/sfx/writing_cutted.mp3")
 writing_sound.set_volume(0.5)
 
@@ -288,7 +440,10 @@ fail_sound = pygame.mixer.Sound("assets/sfx/fail.mp3")
 fail_sound.set_volume(0.5)
 
 #variables
-level = 2
+level = 3
+
+timer = 60
+time_passed = 0
 
 running = True
 bg_scroll = 0
@@ -300,8 +455,7 @@ game_end = False
 game_scene = 0
 introduce_scene = 0
 score = 0
-timer = 60
-
+test_passed = False
 
 
 TIMER_EVENT = pygame.USEREVENT + 1
@@ -326,6 +480,7 @@ while running:
         if event.type == TIMER_EVENT and game_scene == 1:
             if timer > 0:
                 timer -= 1
+                time_passed += 1
         '''if event.type == TIMER_WALKING and game_scene == 1:
             if player.sprite.walk_frame ==1 :
                 player.sprite.walk_frame = 2
@@ -333,15 +488,38 @@ while running:
                 player.sprite.walk_frame = 1'''
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                if start_button_rect.collidepoint(event.pos):
+                if start_button_rect.collidepoint(event.pos) and introduce_scene == 2:
+                    player.add(Alien(level))
                     running = True
                     game_scene = 1
-                if exit_button_rect.collidepoint(event.pos):
+                    match level:
+                        case 1:
+                            timer = 60
+                        case 2:
+                            timer = 40
+                            player.sprite.can_double_jump = True
+                        case 3:
+                            timer = 40
+                            player.sprite.can_glide = True
+                        case 4:
+                            timer = 35
+                            player.sprite.can_shoot = True
+                    introduce_scene = 0
+                if continue_button_start_rect.collidepoint(event.pos):
+                    introduce_scene += 1
+                    introduce_scene_image = pygame.image.load("assets/level_%d_introduce_%d.png" %(level, introduce_scene))
+                if continue_button_end_rect.collidepoint(event.pos) and test_passed:
+                    level += 1
+                    grade_level = "10th"
+                    game_scene = 0
+                    print(2)
+                if exit_button_rect.collidepoint(event.pos) and game_end:
                     running = False
-                if play_again_button_rect.collidepoint(event.pos):
+                if play_again_button_rect.collidepoint(event.pos) and test_passed == False:
                     score = 0
                     timer = 60
                     game_scene = 1
+                    player.remove(player.sprite)
                     
                     
     if timer <= 0:
@@ -350,15 +528,23 @@ while running:
     if game_scene == 0:
         if introduce_scene == 0:
             screen.blit(start_scene, (0,0))
-            screen.blit(start_button, start_button_rect)
+            screen.blit(start_button, continue_button_start_rect)
+            screen.blit(grade_surf, grade_rect)
         elif introduce_scene == 1:
-            pass
+            screen.blit(introduce_scene_image, (0,0))
+            screen.blit(continue_button, continue_button_start_rect)
+        elif introduce_scene == 2:
+            screen.blit(introduce_scene_image, (0,0))
+            screen.blit(continue_button, start_button_rect)
     elif game_scene == 1:
         in_game_scene()
     elif game_scene == 2:
         screen.blit(end_scene, (0,0))
         screen.blit(exit_button, exit_button_rect)
-        screen.blit(play_again_button, play_again_button_rect)
+        if test_passed:
+            screen.blit(continue_button, continue_button_end_rect)
+        else:
+            screen.blit(play_again_button, play_again_button_rect)
         result_display()
     
     pygame.display.update()
