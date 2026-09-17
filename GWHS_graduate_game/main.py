@@ -7,7 +7,7 @@ distract_stuff = ["phone", "phone_notify", "controller"]
 school_stuff= ["document", "pencil", "clipboard", "to_do_list"]
 
 class Alien(pygame.sprite.Sprite):
-    def __init__(self, level = 2):
+    def __init__(self, level):
         super().__init__()
         '''self.image_idle = "assets/main_idle.png"
         self.image_walk_1 ="assets/main_walk_1.png"
@@ -19,9 +19,9 @@ class Alien(pygame.sprite.Sprite):
         self.image_eagle_3 = "assets/eagle_3.png"
         self.image_eagle_4 = "assets/eagle_4.png"
 
-        self.can_double_jump = True
-        self.can_glide = True
-        self.can_shoot = True
+        self.can_double_jump = False
+        self.can_glide = False
+        self.can_shoot = False
         self.jumped = False
 
         match level:
@@ -86,8 +86,9 @@ class Alien(pygame.sprite.Sprite):
         if self.rect.bottom >= player_y_pos:
             self.rect.bottom = player_y_pos
             self.gravity = 0
-            self.can_double_jump = True
             self.can_glide = False
+            if level <2:
+                self.can_double_jump = True
     def update(self):
         self.player_input()
         self.apply_gravity()
@@ -157,7 +158,7 @@ def spawn_stuff(stuff_speed, highest_y):
     global last_spawn_time
     global distraction_in_arow
     if can_spawn == True:
-        if distraction_in_arow > 3:
+        if distraction_in_arow >=3:
             stuff_type = False
         else:
             stuff_type = random.choice([True, False])
@@ -279,6 +280,8 @@ def in_game_scene():
     display_score_and_timer()  
 
 def result_display():
+    global level
+    global test_passed
     grade = ""
     text = ""
     result_font = pygame.font.Font(None, 100)
@@ -294,12 +297,15 @@ def result_display():
         grade = "d"
         text = "You didn't pass the test, but it's almost there may be try to more focus and try harder in your next time!"
     elif score <60:
+        test_passed = True
         grade = "c"
         text = "You passed the test, but you can do it better if put more effort on it."
     elif score <80:
+        test_passed = True
         grade = "b"
         text = "Good job! The Key is to try to avoid distractions. Easy, isn't it?"
     elif score <= 100:
+        test_passed = True
         grade = "a"
         text = "Wonderful! Keep this momentum going, you're on a roll"
     commend_surf = commend_font.render(text, True, (255, 255, 255))
@@ -364,7 +370,7 @@ def level_4():
 
     stuff_group.draw(screen) 
     stuff_group.update()
-    if rate <= 40:
+    if rate <= 3:
         if not len(stuff_group)>num_of_stuffs and can_spawn == True:
             spawn_a_row_stuff(stuff_speed, highest_y)
     else:
@@ -397,16 +403,35 @@ bg_sky = pygame.image.load("assets/sky.png").convert()
 bg_ground = pygame.image.load("assets/ground.png").convert()
  
 start_scene = pygame.image.load("assets/start_scene.png").convert()
-start_button = pygame.image.load("assets/start_button.png").convert_alpha()
-start_button_rect = start_button.get_rect(center=(725, screen_height-75))
-
 end_scene = pygame.image.load("assets/end_scene.png").convert()
+    #introduce scene
+introduce_scene_image = pygame.image.load("assets/level_1_introduce_1.png").convert
+
+
+
+    #buttons 
+start_button = pygame.image.load("assets/start_button.png").convert_alpha()
+start_button_rect = start_button.get_rect(center=(screen_width/2, screen_height-75))
+
 exit_button = pygame.image.load("assets/exit_button.png").convert_alpha()
 exit_button_rect = exit_button.get_rect(center=(screen_width/2 -250, screen_height-75))
 
 play_again_button = pygame.image.load("assets/play_again_button.png").convert_alpha()
 play_again_button_rect = play_again_button.get_rect(center=(screen_width/2+250, screen_height-75))
 
+continue_button = pygame.image.load("assets/continue_button.png").convert_alpha()
+continue_button_start_rect = continue_button.get_rect(center = (screen_width/2, screen_height-75))
+continue_button_end_rect = continue_button.get_rect(center = (screen_width/2+250, screen_height-75))
+
+
+    #fonts
+
+grade_level = "9th"
+grade_font = pygame.font.Font(None, 60)
+grade_surf = grade_font.render("Grade: %s" %grade_level, True, (0,0,0))
+grade_rect = grade_surf.get_rect(center = (screen_width/2, screen_height/2)) 
+
+    #sounds
 writing_sound = pygame.mixer.Sound("assets/sfx/writing_cutted.mp3")
 writing_sound.set_volume(0.5)
 
@@ -414,7 +439,7 @@ fail_sound = pygame.mixer.Sound("assets/sfx/fail.mp3")
 fail_sound.set_volume(0.5)
 
 #variables
-level = 4
+level = 1
 
 timer = 60
 time_passed = 0
@@ -429,7 +454,7 @@ game_end = False
 game_scene = 0
 introduce_scene = 0
 score = 0
-
+test_passed = False
 
 
 TIMER_EVENT = pygame.USEREVENT + 1
@@ -462,24 +487,34 @@ while running:
                 player.sprite.walk_frame = 1'''
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                if start_button_rect.collidepoint(event.pos):
+                if start_button_rect.collidepoint(event.pos) and introduce_scene == 2:
                     running = True
                     game_scene = 1
                     match level:
                         case 1:
                             timer = 60
+                            player.sprite.can_
                         case 2:
                             timer = 40
                         case 3:
-                            40
+                            timer = 40
                         case 4:
-                            35
-                if exit_button_rect.collidepoint(event.pos):
+                            timer = 35
+                    introduce_scene = 0
+                if continue_button_start_rect.collidepoint(event.pos):
+                    introduce_scene += 1
+                    introduce_scene_image = pygame.image.load("assets/level_%d_introduce_%d.png" %(level, introduce_scene))
+                if continue_button_end_rect.collidepoint(event.pos) and test_passed:
+                    level += 1
+                    grade_level = "10th"
+                    game_scene = 0
+                if exit_button_rect.collidepoint(event.pos) and game_end:
                     running = False
-                if play_again_button_rect.collidepoint(event.pos):
+                if play_again_button_rect.collidepoint(event.pos) and test_passed == False:
                     score = 0
                     timer = 60
-                    game_scene = 1
+                    game_scene = 0
+                    player.remove(player.sprite)
                     
                     
     if timer <= 0:
@@ -488,15 +523,23 @@ while running:
     if game_scene == 0:
         if introduce_scene == 0:
             screen.blit(start_scene, (0,0))
-            screen.blit(start_button, start_button_rect)
+            screen.blit(start_button, continue_button_start_rect)
+            screen.blit(grade_surf, grade_rect)
         elif introduce_scene == 1:
-            pass
+            screen.blit(introduce_scene_image, (0,0))
+            screen.blit(continue_button, continue_button_start_rect)
+        elif introduce_scene == 2:
+            screen.blit(introduce_scene_image, (0,0))
+            screen.blit(continue_button, start_button_rect)
     elif game_scene == 1:
         in_game_scene()
     elif game_scene == 2:
         screen.blit(end_scene, (0,0))
         screen.blit(exit_button, exit_button_rect)
-        screen.blit(play_again_button, play_again_button_rect)
+        if test_passed:
+            screen.blit(continue_button, continue_button_end_rect)
+        else:
+            screen.blit(play_again_button, play_again_button_rect)
         result_display()
     
     pygame.display.update()
